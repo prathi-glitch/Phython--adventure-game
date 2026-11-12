@@ -1,14 +1,15 @@
-      
+
 name: Build Android APK
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repository
@@ -20,35 +21,43 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            python3-pip python3-venv \
-            git zip unzip \
-            autoconf libtool pkg-config \
-            zlib1g-dev libffi-dev libssl-dev
+            python3-pip \
+            python3-venv \
+            git \
+            zip \
+            unzip \
+            autoconf \
+            libtool \
+            pkg-config \
+            zlib1g-dev \
+            libffi-dev \
+            libssl-dev
 
       - name: Install Buildozer
         run: |
           python3 -m venv venv
           source venv/bin/activate
-          pip install --upgrade pip
+          pip install --upgrade pip setuptools wheel
           pip install buildozer cython==0.29.37
 
       - name: Initialize Android SDK
         run: |
           source venv/bin/activate
-          buildozer android debug || true
+          buildozer android update
 
-      - name: Accept licenses and install Build Tools
+      - name: Accept Android SDK licenses
         shell: bash
         run: |
           SDK="$HOME/.buildozer/android/platform/android-sdk"
+
           SDKMANAGER=$(find "$SDK" -name sdkmanager -type f | head -n 1)
 
           if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager not found"
+            echo "ERROR: sdkmanager not found"
             exit 1
           fi
 
@@ -58,7 +67,7 @@ jobs:
             "platform-tools" \
             "build-tools;37.0.0"
 
-      - name: Build APK
+      - name: Build Android APK
         run: |
           source venv/bin/activate
           buildozer -v android debug
@@ -69,4 +78,5 @@ jobs:
           name: Python-Adventure-APK
           path: bin/*.apk
           if-no-files-found: error
- 
+
+          

@@ -1,10 +1,9 @@
-
+      
 name: Build Android APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -21,21 +20,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            python3-pip \
-            python3-venv \
-            git \
-            zip \
-            unzip \
-            autoconf \
-            libtool \
-            pkg-config \
-            zlib1g-dev \
-            libffi-dev \
-            libssl-dev
+            python3-pip python3-venv \
+            git zip unzip \
+            autoconf libtool pkg-config \
+            zlib1g-dev libffi-dev libssl-dev
 
       - name: Install Buildozer
         run: |
@@ -44,19 +36,29 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython==0.29.37
 
-      - name: Accept Android SDK licenses
+      - name: Initialize Android SDK
+        run: |
+          source venv/bin/activate
+          buildozer android debug || true
+
+      - name: Accept licenses and install Build Tools
         shell: bash
         run: |
-          SDKMANAGER=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}" -name sdkmanager -type f | head -n 1)
+          SDK="$HOME/.buildozer/android/platform/android-sdk"
+          SDKMANAGER=$(find "$SDK" -name sdkmanager -type f | head -n 1)
+
           if [ -z "$SDKMANAGER" ]; then
-            echo "ERROR: Android sdkmanager not found"
+            echo "sdkmanager not found"
             exit 1
           fi
-          echo "Found sdkmanager: $SDKMANAGER"
-          set +o pipefail
-          yes | "$SDKMANAGER" --licenses
 
-      - name: Build Android APK
+          yes | "$SDKMANAGER" --sdk_root="$SDK" --licenses || true
+
+          "$SDKMANAGER" --sdk_root="$SDK" \
+            "platform-tools" \
+            "build-tools;37.0.0"
+
+      - name: Build APK
         run: |
           source venv/bin/activate
           buildozer -v android debug
@@ -67,3 +69,4 @@ jobs:
           name: Python-Adventure-APK
           path: bin/*.apk
           if-no-files-found: error
+ 

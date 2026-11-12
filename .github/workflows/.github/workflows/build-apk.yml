@@ -8,23 +8,43 @@ on:
 
 jobs:
   build:
-    name: Build Python Adventure
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build APK
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
-          workdir: .
-          buildozer_version: stable 
-          
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3-pip python3-venv \
+            git zip unzip autoconf \
+            libtool pkg-config \
+            zlib1g-dev libffi-dev libssl-dev
+
+      - name: Install Buildozer
+        run: |
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+          pip install buildozer cython==0.29.37
+
+      - name: Build APK
+        run: |
+          source venv/bin/activate
+          buildozer -v android debug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Python-Adventure-APK
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
+          if-no-files-found: error
           
